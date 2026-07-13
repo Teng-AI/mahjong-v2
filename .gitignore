@@ -1,0 +1,14 @@
+# repo is PUBLIC: meta and secret files never land here
+HANDOVER.md
+.env
+.env.*
+.claude/settings.local.json
+
+# build + deps
+node_modules/
+dist/
+*.tsbuildinfo
+
+# local noise
+.DS_Store
+*.log
