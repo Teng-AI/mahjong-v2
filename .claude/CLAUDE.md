@@ -14,7 +14,7 @@ Server-authoritative rebuild of Fuzhou Mahjong. Convex backend + Vite React TS P
 
 - Nothing authoritative runs on the client: no timers, no bots, no validation that matters. Clients render server state and send intents. `deadlineAt` drives a display countdown only.
 - `engine/` stays pure TS with zero Convex imports.
-- Parity = v1 CODE behavior (4 rulings in strategy.md), verified by the ported 131-test suite.
+- v1 is reference, not authority (Teng, 2026-07-22): on any v1-vs-better conflict, show v1's behavior and the alternative, recommend, get a ruling. Rulings live dated in strategy.md "Parity Rulings"; deliberate divergences get pinned by tests. The ported 131-test suite is the regression baseline minus those divergences.
 - Repo is PUBLIC: HANDOVER.md and .env* stay untracked; secrets live in the Convex dashboard.
 - Client stays wrap-ready for a future App Store build: portability constraints in strategy.md (no load-bearing PWA-only APIs, platform features behind one wrapper module, plain DOM/CSS, no third-party social login).
 

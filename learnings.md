@@ -17,6 +17,13 @@ Corrections, patterns, decisions, and domain insights from building mahjong-v2. 
 **Source:** M0 spike gates 2-4, 6 (BUILD-LOG 2026-07-21)
 **Applies to:** M2 server game loop design; no self-healing deadline paranoia needed beyond the planned turn-counter guard
 
+## [2026-07-22] v1 is reference, not authority
+
+**Type:** correction
+**Wrong assumption:** Parity means defaulting new v1-vs-rules-doc conflicts to v1 code behavior (extending the 2026-07-13 blanket ruling).
+**Reality:** Teng wants v1 referenced, then the better behavior chosen and ruled on. First case: gold wildcard chow placement (ruling 5), where v1's upward-only scan was an implementation artifact, not a design choice.
+**Impact:** Every future conflict: present v1 behavior + alternative + recommendation, get a ruling, log it dated in strategy.md, pin with a test.
+
 ## [2026-07-21] vercel deploy <folder> names the project after the folder
 
 **Type:** correction

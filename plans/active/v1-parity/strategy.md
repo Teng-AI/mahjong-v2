@@ -105,6 +105,8 @@ Deliberate consequence: nothing in the current design forecloses scale, so no pr
 
 RULED BY TENG 2026-07-13: v2 matches v1 CODE behavior on all four real conflicts. The code is what people actually played and what the tests encode.
 
+POSTURE CHANGE (Teng, 2026-07-22): stop defaulting to v1-code behavior on new conflicts. v1 is reference, not authority; on each conflict, present v1's behavior and the better alternative, recommend, and get a ruling. Rulings 1-4 below stand as explicit 2026-07-13 decisions until individually revisited; ruling 5 was the first decided under the new posture.
+
 1. Dealer streak bonus = streak banked BEFORE the hand (1st dealer win +0, 2nd +1, 3rd +2). The doc's +3-on-3rd example is rejected.
 2. Winning immediately after your own Chi/Peng completes the hand: blocked. Gang replacement-draw wins stay allowed.
 3. Discarding a gold tile: banned outright. No penalty subsystem.
