@@ -70,6 +70,26 @@ src/       Vite React PWA: renders server state, sends intents, client-side coun
 - **M2 Server game loop.** Schema + intent mutations + timers + server-side bots. Gate: full Quick Play game vs 3 bots on a real iPhone, with the screen locked through at least one calling phase and one full bot turn.
 - **M3 Multiplayer.** Rooms, join by code, seat claim/rejoin, 4-human session, cumulative scores, settle-up, score edit, game log, ready/next-round, abort. Gate: the acceptance criteria 2 and 3 scenario passes with 2+ real devices.
 - **M4 Parity polish.** Mobile-first UI pass, PWA install, sounds, shortcuts, rules modal, winner reveal, spectator, error boundaries, OG/SEO (the "polish" rows of the parity checklist). Then write the v1-vs-v2 comparison memo (brainstorm Q7).
+- **M5 App Store decision point (optional, post-M4, added 2026-07-21).** Only if people are actually playing: one-day Capacitor spike. Wrap the built web client in a native iOS shell, run on device via Xcode, verify Convex reconnect inside the webview. Ship decision weighs $99/yr Apple account + App Review (guideline 4.2 "minimum functionality" wants a few native touches: haptics, share sheet, offline states) against the PWA already covering home-screen install. Not a rewrite: same Vite React client, same Convex backend.
+
+### Platform Portability Constraints (added 2026-07-21, for the M5 option)
+
+Build rules from M1 onward so the App Store path stays a wrap, not a rewrite:
+
+1. **No load-bearing PWA-only APIs.** Web push, badging, and service-worker tricks stay cosmetic; game-critical flows never depend on them.
+2. **Platform-flavored features (sounds, haptics, storage) go behind one small wrapper module** so Capacitor plugins can slot in later without touching call sites.
+3. **Rendering stays plain DOM/CSS (Tailwind)** with no PWA-specific layout assumptions; it must port into a webview untouched.
+4. **No third-party social login, ever.** Anonymous token + room-code play (already the identity design) dodges Apple's Sign in with Apple requirement. No real-money anything, which keeps App Review out of gambling territory.
+
+### Scale Posture (added 2026-07-21)
+
+Ruled with Teng: no milestone changes for the "thousands playing at once" scenario. The architecture is already per-room and horizontally scalable: each game is one document, mutations/timers/bots are per-game, no global state, no singleton. Convex runs functions on demand, so 10 rooms and 10,000 rooms are the same code. What changes at scale is billing and product surface, not plumbing:
+
+1. The $0 free-plan assumption breaks first. Gate 7's per-game call burn doubles as the unit-cost input for a paid-plan decision (calls per game x games per day x price).
+2. Lobby/matchmaking beyond shared room codes, room-creation rate limiting, and abuse handling become features to add. 6-char codes themselves hold (~2B combinations).
+3. Ops maturity (monitoring, skew alerting at volume, staging deploy) is additive, not a redesign.
+
+Deliberate consequence: nothing in the current design forecloses scale, so no pre-building for it. The pre-mortem's top risk stays project parking, not traffic.
 
 ### Files to Create (kickoff, before M0)
 
