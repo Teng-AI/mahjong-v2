@@ -3,6 +3,7 @@ HANDOVER.md
 .env
 .env.*
 .claude/settings.local.json
+.claude/compaction-archives/
 
 # build + deps
 node_modules/
