@@ -24,6 +24,13 @@ Corrections, patterns, decisions, and domain insights from building mahjong-v2. 
 **Reality:** Teng wants v1 referenced, then the better behavior chosen and ruled on. First case: gold wildcard chow placement (ruling 5), where v1's upward-only scan was an implementation artifact, not a design choice.
 **Impact:** Every future conflict: present v1 behavior + alternative + recommendation, get a ruling, log it dated in strategy.md, pin with a test.
 
+## [2026-07-22] Red-authored test fixtures need adversarial review before trusting failures
+
+**Type:** pattern
+**Context:** M1 red tests were written against stubs, so fixture bugs could not surface until implementation. Opus finished 250/253 and claimed the 3 failures were malformed fixtures, which the audit confirmed (a perfect-runs deal is a legitimate setup win; a "three golds" fixture that plants one gold).
+**What works:** When an implementer claims "the test is wrong", verify the claim independently before editing either side; in mahjong specifically, any hand fixture must be checked against ALL win paths (instant wins fire at deal), not just the scenario it was written for.
+**Reuse:** Any tests-first flow with generated/red tests; any fixture in a domain with global invariants that can trigger on innocent-looking data.
+
 ## [2026-07-21] vercel deploy <folder> names the project after the folder
 
 **Type:** correction

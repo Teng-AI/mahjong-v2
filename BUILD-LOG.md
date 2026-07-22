@@ -35,3 +35,17 @@ Monthly ritual: glance at Convex dashboard usage vs free-plan caps, note it here
 - Broke: nothing lasting. Detours: anonymous local Convex default; Vercel auto-named a project "dist" when deploying the dist/ folder (deleted, re-linked properly as mahjong-v2); a second convex.cloud URL in the prod bundle turned out to be example text inside the Convex client's error message, not a misconfiguration
 - Note for M2: `npx convex run` from CLI is a clean way to drive server functions in tests/scripts; `--prod` flag targets production
 - Next: M1 engine. Port 5 of the 131 v1 tests first as adapter proof, then the rest. Pure TS, zero Convex imports. Per CLAUDE.md model routing: Fable designs the engine API, Opus/Sonnet grind the implementation against tests
+
+## 2026-07-22 (session 2: M1 engine, complete)
+
+- Hours: ~2 (late night, continued from session 1 wrap)
+- **M1 COMPLETE. Engine gate passed: 253/253 tests green, zero Convex imports (enforced by a purity test), strict TS + lint clean.**
+- Fable designed the engine API first (plans/active/v1-parity/design-engine-api.md): v1-parity utility surface + Result-returning immutable transitions, injected randomness, seq counter (becomes the M2 timer guard), engine-side redaction (viewFor). Adapter proof: 6 v1 tests ported with import-path edits only before committing to the shape
+- Model routing worked as designed: Sonnet subagents ported the 131 v1 tests verbatim and authored 117 new red tests from the spec; Opus subagents implemented internals to green (two runs); Fable audited between every stage
+- Audit catch 1: the win-checker chow branch only placed golds at/above the lowest real tile. Checked v1: same behavior (upward-scan artifact). Surfaced as parity ruling 5; Teng re-ruled AGAINST v1 (golds substitute anywhere in a run). First deliberate divergence, pinned in parity-edges.test.ts
+- Posture change (Teng): v1 is reference, not authority. On new conflicts: show v1 + alternative, recommend, get a ruling. Logged in CLAUDE.md, strategy.md, memory
+- Audit catch 2: Opus finished 250/253 claiming 3 deal-test fixtures were malformed. Verified independently: correct both times (a perfect-runs deal legitimately wins Robbing the Gold at setup; the Three Golds fixture planted 1 gold, not 3). Fixed fixtures, not engine
+- New coverage v1 never had: 34 scoring-formula tests (full 1.7 table incl. per-path quirks), 20 deterministic deal/instant-win tests, 33 transition tests (immutability + error guards), 25 seeded full-game property tests (tile conservation after every transition), 5 privacy tests on redacted views
+- Broke: one Sonnet subagent died mid-run on an expired OAuth token; relaunched fresh with a repair brief, no lost work beyond the partial file it was writing
+- Engine size: 1,990 LOC across 8 files vs v1's 4,505 (memo material)
+- Next: M2 server game loop. Fable session first: schema + scheduling/idempotence design + pre-gate review (CLAUDE.md routing), then mutations. Delete spike UI/convex functions when M2 starts. Gate 7 (quota burn) measurement still deferred to post-M2
