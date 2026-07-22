@@ -29,3 +29,5 @@ export * from './deal';
 export * from './score';
 export * from './settle';
 export * from './view';
+export { chooseBotAction } from './bots';
+export type { BotIntent } from './bots';
