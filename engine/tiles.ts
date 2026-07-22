@@ -82,14 +82,140 @@ export function canPung(
   return matches >= 2;
 }
 
-// ---------------------------------------------------------------------------
-// Stubs below: signatures per design-engine-api.md + v1 lib/tiles.ts (spec
-// 4.1). Not yet implemented; land per M1 implementation plan.
-// ---------------------------------------------------------------------------
+const SUIT_ORDER: readonly string[] = ['dots', 'bamboo', 'characters'];
+const WIND_ORDER: readonly string[] = ['east', 'south', 'west', 'north'];
 
 /** Split a tile id into its structural parts (category/suit/value/instance). */
-export function parseTile(_tileId: TileId): ParsedTile {
-  throw new Error('not implemented');
+export function parseTile(tileId: TileId): ParsedTile {
+  const parts = tileId.split('_');
+  const instance = Number(parts[parts.length - 1]);
+  if (parts[0] === 'dots' || parts[0] === 'bamboo' || parts[0] === 'characters') {
+    return {
+      category: 'suit',
+      suit: parts[0] as ParsedTile['suit'],
+      value: Number(parts[1]),
+      instance,
+    };
+  }
+  if (parts[0] === 'wind') {
+    return { category: 'wind', value: parts[1], instance };
+  }
+  return { category: 'dragon', value: parts[1], instance };
+}
+
+// --- Winning-hand backtracker -------------------------------------------------
+// Works on TYPE counts: three suit arrays (index 1..9) plus an honors map. Golds
+// are a plain count of wildcards that can fill any slot in a set or the pair.
+// Every real tile must be consumed; leftover golds fill complete gold-only groups.
+
+interface WinCounts {
+  suits: number[][]; // [suitIndex][value 1..9]
+  honors: Map<string, number>;
+}
+
+function buildWinCounts(nonGoldTiles: TileId[]): WinCounts {
+  const suits = [new Array(10).fill(0), new Array(10).fill(0), new Array(10).fill(0)];
+  const honors = new Map<string, number>();
+  for (const tile of nonGoldTiles) {
+    const p = parseTile(tile);
+    if (p.category === 'suit') {
+      suits[SUIT_ORDER.indexOf(p.suit as string)][p.value as number]++;
+    } else {
+      const type = getTileType(tile);
+      honors.set(type, (honors.get(type) ?? 0) + 1);
+    }
+  }
+  return { suits, honors };
+}
+
+function solveWin(
+  c: WinCounts,
+  golds: number,
+  sets: number,
+  needPair: boolean,
+): boolean {
+  // Smallest present real suit tile must be resolved here.
+  for (let s = 0; s < 3; s++) {
+    const arr = c.suits[s];
+    for (let v = 1; v <= 9; v++) {
+      if (arr[v] > 0) {
+        // Pung (v, v, v)
+        if (sets > 0) {
+          for (let a = 1; a <= Math.min(3, arr[v]); a++) {
+            const g = 3 - a;
+            if (golds >= g) {
+              arr[v] -= a;
+              const ok = solveWin(c, golds - g, sets - 1, needPair);
+              arr[v] += a;
+              if (ok) return true;
+            }
+          }
+        }
+        // Chow (v, v+1, v+2), lowest slot always a real v
+        if (sets > 0 && v <= 7) {
+          for (const r1 of [true, false]) {
+            for (const r2 of [true, false]) {
+              if (r1 && arr[v + 1] < 1) continue;
+              if (r2 && arr[v + 2] < 1) continue;
+              const need = (r1 ? 0 : 1) + (r2 ? 0 : 1);
+              if (golds < need) continue;
+              arr[v]--;
+              if (r1) arr[v + 1]--;
+              if (r2) arr[v + 2]--;
+              const ok = solveWin(c, golds - need, sets - 1, needPair);
+              arr[v]++;
+              if (r1) arr[v + 1]++;
+              if (r2) arr[v + 2]++;
+              if (ok) return true;
+            }
+          }
+        }
+        // Pair (v, v)
+        if (needPair) {
+          for (let a = 1; a <= Math.min(2, arr[v]); a++) {
+            const g = 2 - a;
+            if (golds >= g) {
+              arr[v] -= a;
+              const ok = solveWin(c, golds - g, sets, false);
+              arr[v] += a;
+              if (ok) return true;
+            }
+          }
+        }
+        return false;
+      }
+    }
+  }
+  // Smallest present honor tile (pung/pair only; honors never chow).
+  for (const [key, count] of c.honors) {
+    if (count > 0) {
+      if (sets > 0) {
+        for (let a = 1; a <= Math.min(3, count); a++) {
+          const g = 3 - a;
+          if (golds >= g) {
+            c.honors.set(key, count - a);
+            const ok = solveWin(c, golds - g, sets - 1, needPair);
+            c.honors.set(key, count);
+            if (ok) return true;
+          }
+        }
+      }
+      if (needPair) {
+        for (let a = 1; a <= Math.min(2, count); a++) {
+          const g = 2 - a;
+          if (golds >= g) {
+            c.honors.set(key, count - a);
+            const ok = solveWin(c, golds - g, sets, false);
+            c.honors.set(key, count);
+            if (ok) return true;
+          }
+        }
+      }
+      return false;
+    }
+  }
+  // No real tiles left: remaining golds must exactly fill the outstanding slots.
+  return golds === sets * 3 + (needPair ? 2 : 0);
 }
 
 /**
@@ -98,88 +224,272 @@ export function parseTile(_tileId: TileId): ParsedTile {
  * concealed tiles passed in.
  */
 export function canFormWinningHand(
-  _tiles: TileId[],
-  _goldTileType: TileType,
-  _exposedMeldCount: number = 0,
+  tiles: TileId[],
+  goldTileType: TileType,
+  exposedMeldCount: number = 0,
 ): boolean {
-  throw new Error('not implemented');
+  const golds = countGoldTiles(tiles, goldTileType);
+  const nonGold = tiles.filter((t) => !isGoldTile(t, goldTileType));
+  const setsNeeded = 5 - exposedMeldCount;
+  if (setsNeeded < 0) return false;
+  const counts = buildWinCounts(nonGold);
+  return solveWin(counts, golds, setsNeeded, true);
 }
 
 /** Whether the 2 Gold tiles in hand are serving as the pair (not a wildcard set). */
 export function hasGoldenPair(
-  _tiles: TileId[],
-  _goldTileType: TileType,
-  _exposedMeldCount: number = 0,
+  tiles: TileId[],
+  goldTileType: TileType,
+  exposedMeldCount: number = 0,
 ): boolean {
-  throw new Error('not implemented');
+  if (countGoldTiles(tiles, goldTileType) !== 2) return false;
+  const nonGold = tiles.filter((t) => !isGoldTile(t, goldTileType));
+  const setsNeeded = 5 - exposedMeldCount;
+  if (setsNeeded < 0) return false;
+  // Golds are the pair: the rest must form all sets with zero wildcard use.
+  const counts = buildWinCounts(nonGold);
+  return solveWin(counts, 0, setsNeeded, false);
 }
 
 /** All valid Chow sequences formable with `discardTile` plus 2 tiles from hand. */
 export function canChow(
-  _hand: TileId[],
-  _discardTile: TileId,
-  _goldTileType: TileType,
+  hand: TileId[],
+  discardTile: TileId,
+  goldTileType: TileType,
 ): ChowOption[] {
-  throw new Error('not implemented');
+  if (isBonusTile(discardTile) || isGoldTile(discardTile, goldTileType)) return [];
+  if (!isSuitTile(discardTile)) return [];
+  const p = parseTile(discardTile);
+  const suit = p.suit as string;
+  const v = p.value as number;
+
+  // Non-gold hand tiles of the discard's suit, indexed by value.
+  const byValue = new Map<number, TileId[]>();
+  for (const tile of hand) {
+    if (isGoldTile(tile, goldTileType)) continue;
+    if (!isSuitTile(tile)) continue;
+    const tp = parseTile(tile);
+    if ((tp.suit as string) !== suit) continue;
+    const val = tp.value as number;
+    const list = byValue.get(val) ?? [];
+    list.push(tile);
+    byValue.set(val, list);
+  }
+
+  const options: ChowOption[] = [];
+  // Three windows where the discard can sit: low, middle, high.
+  for (const start of [v - 2, v - 1, v]) {
+    if (start < 1 || start + 2 > 9) continue;
+    const need = [start, start + 1, start + 2].filter((x) => x !== v);
+    const t1 = byValue.get(need[0])?.[0];
+    const t2 = byValue.get(need[1])?.[0];
+    if (t1 && t2) {
+      options.push({
+        tilesFromHand: [t1, t2],
+        sequence: [
+          `${suit}_${start}`,
+          `${suit}_${start + 1}`,
+          `${suit}_${start + 2}`,
+        ],
+      });
+    }
+  }
+  return options;
 }
 
 /** Whether hand + discardTile forms a winning hand (Ron). */
 export function canWinOnDiscard(
-  _hand: TileId[],
-  _discardTile: TileId,
-  _goldTileType: TileType,
-  _exposedMeldCount: number = 0,
+  hand: TileId[],
+  discardTile: TileId,
+  goldTileType: TileType,
+  exposedMeldCount: number = 0,
 ): boolean {
-  throw new Error('not implemented');
+  return canFormWinningHand([...hand, discardTile], goldTileType, exposedMeldCount);
 }
 
 /** Remove each tile id in `toRemove` from `tiles`; null if any id is missing. */
 export function removeTiles(
-  _tiles: TileId[],
-  _toRemove: TileId[],
+  tiles: TileId[],
+  toRemove: TileId[],
 ): TileId[] | null {
-  throw new Error('not implemented');
+  const out = [...tiles];
+  for (const tile of toRemove) {
+    const idx = out.indexOf(tile);
+    if (idx === -1) return null;
+    out.splice(idx, 1);
+  }
+  return out;
+}
+
+function displayKey(tile: TileId, goldTileType: TileType | null): [number, number, number] {
+  if (goldTileType && isGoldTile(tile, goldTileType)) return [0, 0, 0];
+  const p = parseTile(tile);
+  if (p.category === 'suit') {
+    return [1, SUIT_ORDER.indexOf(p.suit as string), p.value as number];
+  }
+  if (p.category === 'wind') {
+    return [2, WIND_ORDER.indexOf(p.value as string), 0];
+  }
+  return [3, 0, 0];
 }
 
 /** Sort a hand for display: Golds first, then suit/wind/dragon, then value. */
 export function sortTilesForDisplay(
-  _tiles: TileId[],
-  _goldTileType: TileType | null,
+  tiles: TileId[],
+  goldTileType: TileType | null,
 ): TileId[] {
-  throw new Error('not implemented');
+  return [...tiles].sort((a, b) => {
+    const ka = displayKey(a, goldTileType);
+    const kb = displayKey(b, goldTileType);
+    for (let i = 0; i < 3; i++) {
+      if (ka[i] !== kb[i]) return ka[i] - kb[i];
+    }
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
 }
 
 /** Whether hand has >= 3 matching non-gold copies of discardTile's type (Kong on discard). */
 export function canKong(
-  _hand: TileId[],
-  _discardTile: TileId,
-  _goldTileType: TileType,
+  hand: TileId[],
+  discardTile: TileId,
+  goldTileType: TileType,
 ): boolean {
-  throw new Error('not implemented');
+  if (isBonusTile(discardTile) || isGoldTile(discardTile, goldTileType)) return false;
+  const type = getTileType(discardTile);
+  const matches = hand.filter(
+    (t) => getTileType(t) === type && !isGoldTile(t, goldTileType),
+  ).length;
+  return matches >= 3;
 }
 
 /** Tile types with 4 copies in hand (excluding Gold/bonus), eligible for concealed Kong. */
 export function canDeclareConcealedKong(
-  _hand: TileId[],
-  _goldTileType: TileType,
+  hand: TileId[],
+  goldTileType: TileType,
 ): TileType[] {
-  throw new Error('not implemented');
+  const counts = new Map<TileType, number>();
+  for (const tile of hand) {
+    if (isBonusTile(tile) || isGoldTile(tile, goldTileType)) continue;
+    const type = getTileType(tile);
+    counts.set(type, (counts.get(type) ?? 0) + 1);
+  }
+  const result: TileType[] = [];
+  for (const [type, count] of counts) {
+    if (count === 4) result.push(type);
+  }
+  return result;
 }
 
 /** Exposed Pungs upgradeable to Kong using a matching tile from hand. */
 export function canUpgradePungToKong(
-  _hand: TileId[],
-  _exposedMelds: Meld[],
-  _goldTileType: TileType,
+  hand: TileId[],
+  exposedMelds: Meld[],
+  goldTileType: TileType,
 ): { meldIndex: number; tileFromHand: TileId }[] {
-  throw new Error('not implemented');
+  const result: { meldIndex: number; tileFromHand: TileId }[] = [];
+  exposedMelds.forEach((meld, meldIndex) => {
+    if (meld.type !== 'pung') return;
+    const type = getTileType(meld.tiles[0]);
+    if (type === goldTileType) return; // gold can never be melded/upgraded
+    const tileFromHand = hand.find(
+      (t) => getTileType(t) === type && !isGoldTile(t, goldTileType),
+    );
+    if (tileFromHand) result.push({ meldIndex, tileFromHand });
+  });
+  return result;
+}
+
+// --- Safe-discard scorer ------------------------------------------------------
+// Ranks a candidate by evaluating the hand left AFTER discarding it: keep whatever
+// leaves the most structure (complete sets > pairs/partial runs > isolated).
+
+const SET_SCORE = 100;
+const PAIR_SCORE = 10;
+const PARTIAL_SCORE = 10;
+
+function bestSuitValue(counts: number[], from: number): number {
+  let i = from;
+  while (i <= 9 && counts[i] === 0) i++;
+  if (i > 9) return 0;
+  let best = 0;
+  // Pung
+  if (counts[i] >= 3) {
+    counts[i] -= 3;
+    best = Math.max(best, SET_SCORE + bestSuitValue(counts, i));
+    counts[i] += 3;
+  }
+  // Chow
+  if (i <= 7 && counts[i] >= 1 && counts[i + 1] >= 1 && counts[i + 2] >= 1) {
+    counts[i]--; counts[i + 1]--; counts[i + 2]--;
+    best = Math.max(best, SET_SCORE + bestSuitValue(counts, i));
+    counts[i]++; counts[i + 1]++; counts[i + 2]++;
+  }
+  // Pair
+  if (counts[i] >= 2) {
+    counts[i] -= 2;
+    best = Math.max(best, PAIR_SCORE + bestSuitValue(counts, i));
+    counts[i] += 2;
+  }
+  // Partial run (i, i+1)
+  if (i <= 8 && counts[i] >= 1 && counts[i + 1] >= 1) {
+    counts[i]--; counts[i + 1]--;
+    best = Math.max(best, PARTIAL_SCORE + bestSuitValue(counts, i));
+    counts[i]++; counts[i + 1]++;
+  }
+  // Partial gap (i, i+2)
+  if (i <= 7 && counts[i] >= 1 && counts[i + 2] >= 1) {
+    counts[i]--; counts[i + 2]--;
+    best = Math.max(best, PARTIAL_SCORE + bestSuitValue(counts, i));
+    counts[i]++; counts[i + 2]++;
+  }
+  // Isolated: drop one copy of i
+  counts[i]--;
+  best = Math.max(best, bestSuitValue(counts, i));
+  counts[i]++;
+  return best;
+}
+
+function handStructureValue(tiles: TileId[]): number {
+  const suits = [new Array(10).fill(0), new Array(10).fill(0), new Array(10).fill(0)];
+  const honors = new Map<string, number>();
+  for (const tile of tiles) {
+    if (isSuitTile(tile)) {
+      const p = parseTile(tile);
+      suits[SUIT_ORDER.indexOf(p.suit as string)][p.value as number]++;
+    } else {
+      const type = getTileType(tile);
+      honors.set(type, (honors.get(type) ?? 0) + 1);
+    }
+  }
+  let total = 0;
+  for (const arr of suits) total += bestSuitValue(arr, 1);
+  for (const count of honors.values()) {
+    if (count >= 3) total += SET_SCORE;
+    else if (count === 2) total += PAIR_SCORE;
+  }
+  return total;
 }
 
 /** Choose a discard that preserves the most sets (turn-timer auto-play / bots). */
 export function selectSafeDiscard(
-  _hand: TileId[],
-  _goldTileType: TileType,
+  hand: TileId[],
+  goldTileType: TileType,
   _discardPile?: TileId[],
 ): TileId | null {
-  throw new Error('not implemented');
+  let bestTile: TileId | null = null;
+  let bestScore = -Infinity;
+  const seen = new Set<TileId>();
+  for (let idx = 0; idx < hand.length; idx++) {
+    const tile = hand[idx];
+    if (isGoldTile(tile, goldTileType)) continue; // never discard gold
+    if (seen.has(tile)) continue;
+    seen.add(tile);
+    const remaining = [...hand.slice(0, idx), ...hand.slice(idx + 1)];
+    const score = handStructureValue(remaining);
+    if (score > bestScore) {
+      bestScore = score;
+      bestTile = tile;
+    }
+  }
+  return bestTile;
 }

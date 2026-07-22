@@ -109,7 +109,8 @@ RULED BY TENG 2026-07-13: v2 matches v1 CODE behavior on all four real conflicts
 2. Winning immediately after your own Chi/Peng completes the hand: blocked. Gang replacement-draw wins stay allowed.
 3. Discarding a gold tile: banned outright. No penalty subsystem.
 4. Timer bounds in UI: 5-120s, default 30s, or off. Quick Play 30s/30s.
-5. (Self-resolving, no ruling needed) Scoring values: code and `mahjong-rules.md` agree (+15/+30/+30/+50/+100 table); the stale comments in v1 `types/index.ts` are ignored.
+5. (Added 2026-07-22 during M1, default-ruled by Claude per Teng's blanket "match v1 code" principle; flag for Teng to re-rule if desired.) Gold wildcard chow placement: v1's win checker never lets a gold stand in for a tile BELOW the lowest real tile of a run (holding 8+9, a gold cannot complete 7-8-9; holding 6+7 it CAN complete 6-7-8). The rules doc's "substitutes for any tile" disagrees. v2 matches the code; pinned by engine/__tests__/parity-edges.test.ts.
+6. (Self-resolving, no ruling needed) Scoring values: code and `mahjong-rules.md` agree (+15/+30/+30/+50/+100 table); the stale comments in v1 `types/index.ts` are ignored.
 
 ## Risk Assessment
 
