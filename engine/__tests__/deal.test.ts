@@ -49,10 +49,27 @@ function assertOk(result: ReturnType<typeof initHand>): asserts result is {
 // ============================================
 
 describe('initHand: standard deal', () => {
-  // First 66 tiles of generateAllTiles() are all dots/bamboo suit tiles (winds
-  // start at index 108), so this scenario naturally has zero bonus tiles in
-  // any dealt hand or at the gold-flip position -- no crafting needed.
-  const shuffled = generateAllTiles();
+  // Hands must be JUNK. With perfect consecutive runs (e.g. an unshuffled
+  // wall) the dealer's 17 legitimately win Robbing the Gold at setup, and any
+  // "5 sets + single" 16-tile hand wins via the dealer-swap check no matter
+  // what the 17th tile is. Four isolated types per seat (value gaps >= 3, no
+  // pairs across the pool) keep every seat far from tenpai.
+  const JUNK = [
+    ['dots_1', 'dots_4', 'dots_7', 'bamboo_1'], // dealer
+    ['dots_2', 'dots_5', 'dots_8', 'bamboo_4'],
+    ['dots_3', 'dots_6', 'dots_9', 'bamboo_7'],
+    ['characters_1', 'characters_4', 'characters_7', 'characters_9'],
+  ];
+  const front: TileId[] = [];
+  for (let pass = 0; pass < 16; pass++) {
+    for (let seat = 0; seat < 4; seat++) {
+      const type = JUNK[seat][Math.floor(pass / 4)];
+      front[pass * 4 + seat] = `${type}_${pass % 4}`;
+    }
+  }
+  front[64] = 'characters_2_0'; // dealer's 17th: isolated from every dealer type
+  front[65] = 'bamboo_5_0'; // gold flip: a type no hand holds
+  const shuffled = craft(front);
 
   it('deals 17 to the dealer, 16 to everyone else', () => {
     const result = initHand({ dealerSeat: 0, dealerStreak: 0 }, shuffled);
@@ -248,15 +265,16 @@ describe('initHand: Three Golds instant win', () => {
   const seat2Hand = junkTypes.map((t) => `${t}_1`);
   const seat3Hand = junkTypes.slice(0, 16).map((t) => `${t}_2`);
 
-  // seat1 holds all 3 wildcard copies of the type that will flip gold: 5
-  // real pungs (15) + one lone tile of the target type (1) = 16.
+  // seat1 holds all 3 LIVE copies of the type that will flip gold (copy 1 is
+  // the exposed instance, out of play): 4 real pungs (12) + 1 single (1) +
+  // characters_9 copies 0/2/3 (3) = 16.
   const seat1Hand = [
     'dots_1_0', 'dots_1_1', 'dots_1_2',
     'dots_2_0', 'dots_2_1', 'dots_2_2',
     'bamboo_1_0', 'bamboo_1_1', 'bamboo_1_2',
     'bamboo_2_0', 'bamboo_2_1', 'bamboo_2_2',
-    'characters_1_0', 'characters_1_1', 'characters_1_2',
-    'characters_9_0',
+    'characters_1_0',
+    'characters_9_0', 'characters_9_2', 'characters_9_3',
   ];
 
   const front: TileId[] = [];

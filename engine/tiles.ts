@@ -258,6 +258,33 @@ export function hasGoldenPair(
   return solveWin(counts, 0, setsNeeded, false);
 }
 
+/**
+ * Suit TYPES that complete a 16-tile hand into a win (tenpai scan). A candidate
+ * type is added as a CONCRETE tile: when it equals the gold type it is counted
+ * as a real tile of that type, not as an extra wildcard (the hand's existing
+ * gold tiles stay wildcards). Honors never sit in hands, so only the 27 suit
+ * types are scanned. exposedMeldCount reduces the sets required.
+ */
+export function getWinningTiles(
+  hand: TileId[],
+  goldTileType: TileType,
+  exposedMeldCount: number = 0,
+): TileType[] {
+  const setsNeeded = 5 - exposedMeldCount;
+  if (setsNeeded < 0) return [];
+  const golds = countGoldTiles(hand, goldTileType);
+  const nonGold = hand.filter((t) => !isGoldTile(t, goldTileType));
+  const result: TileType[] = [];
+  for (const suit of SUITS) {
+    for (let value = 1; value <= 9; value++) {
+      const type = `${suit}_${value}`;
+      const counts = buildWinCounts([...nonGold, `${type}_0`]);
+      if (solveWin(counts, golds, setsNeeded, true)) result.push(type);
+    }
+  }
+  return result;
+}
+
 /** All valid Chow sequences formable with `discardTile` plus 2 tiles from hand. */
 export function canChow(
   hand: TileId[],
