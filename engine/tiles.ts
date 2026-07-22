@@ -151,22 +151,29 @@ function solveWin(
             }
           }
         }
-        // Chow (v, v+1, v+2), lowest slot always a real v
-        if (sets > 0 && v <= 7) {
-          for (const r1 of [true, false]) {
-            for (const r2 of [true, false]) {
-              if (r1 && arr[v + 1] < 1) continue;
-              if (r2 && arr[v + 2] < 1) continue;
-              const need = (r1 ? 0 : 1) + (r2 ? 0 : 1);
-              if (golds < need) continue;
-              arr[v]--;
-              if (r1) arr[v + 1]--;
-              if (r2) arr[v + 2]--;
-              const ok = solveWin(c, golds - need, sets - 1, needPair);
-              arr[v]++;
-              if (r1) arr[v + 1]++;
-              if (r2) arr[v + 2]++;
-              if (ok) return true;
+        // Chow: v may sit in the low, middle, or high slot (ruling 5 re-ruled
+        // 2026-07-22: golds substitute anywhere, including below the lowest
+        // real tile). Slots below v hold no real tiles (v is the smallest
+        // present), so the real-tile branch skips them and golds fill in.
+        if (sets > 0) {
+          for (const start of [v - 2, v - 1, v]) {
+            if (start < 1 || start + 2 > 9) continue;
+            const slots = [start, start + 1, start + 2].filter((x) => x !== v);
+            for (const r1 of [true, false]) {
+              for (const r2 of [true, false]) {
+                if (r1 && arr[slots[0]] < 1) continue;
+                if (r2 && arr[slots[1]] < 1) continue;
+                const need = (r1 ? 0 : 1) + (r2 ? 0 : 1);
+                if (golds < need) continue;
+                arr[v]--;
+                if (r1) arr[slots[0]]--;
+                if (r2) arr[slots[1]]--;
+                const ok = solveWin(c, golds - need, sets - 1, needPair);
+                arr[v]++;
+                if (r1) arr[slots[0]]++;
+                if (r2) arr[slots[1]]++;
+                if (ok) return true;
+              }
             }
           }
         }
