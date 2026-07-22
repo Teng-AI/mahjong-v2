@@ -49,3 +49,16 @@ Monthly ritual: glance at Convex dashboard usage vs free-plan caps, note it here
 - Broke: one Sonnet subagent died mid-run on an expired OAuth token; relaunched fresh with a repair brief, no lost work beyond the partial file it was writing
 - Engine size: 1,990 LOC across 8 files vs v1's 4,505 (memo material)
 - Next: M2 server game loop. Fable session first: schema + scheduling/idempotence design + pre-gate review (CLAUDE.md routing), then mutations. Delete spike UI/convex functions when M2 starts. Gate 7 (quota burn) measurement still deferred to post-M2
+
+## 2026-07-22 (session 3: M2 server loop, built; iPhone gate pending)
+
+- Hours: ~2 (same day as session 2)
+- **M2 code complete: schema, intent mutations, seq-guarded timer loop, server bots, convex-test suite, minimal Quick Play client. 306/306 tests green. Deployed to dev; browser smoke passed. iPhone gate NOT yet run (needs Teng + phone).**
+- Fable designed first (design-server-loop.md): 4 tables, engine state stored verbatim as v.any() (decision 2.1), token identity, applyAndSchedule choke point, seq guard as the correctness mechanism, self-healing backstop in every intent, bots as pure chooseBotAction(view, legal, difficulty) that only sees redacted state
+- Routing: Opus built the convex layer and engine/bots.ts (parallel), Sonnet built the convex-test suite and the client, Fable audited everything and fixed the timer-class bugs directly
+- Audit catch 3: timeout auto-discard ignored calledTypeThisTurn; a turn-timer expiry right after your own pung/chow would propose an illegal discard and leave the game unscheduled (v1-style stall). Fixed in loop.ts
+- Audit catch 4: a bot step failing without advancing seq re-armed botAct every 900ms forever (quota burn on the hard-capped free plan). botAct now refuses to reschedule on zero progress
+- Audit catch 5: the test agent reported "draw() doesn't validate needing a draw" as a documentation note; it was an exploit (modified client stacks tiles via intentDraw). Gated on legalActions.canDraw in the mutation, pinned with a test
+- Broke: convex dev push failed twice. (1) Convex CLI bundles/analyzes every non-*.test.ts file under convex/, so the test helpers (import.meta.glob) broke deploys; server tests moved to tests/convex/. (2) Leftover M0 spike rows failed the new schema validation; cleared via convex import --replace with an empty table
+- Browser smoke on dev (small-salamander-2): Quick Play deal correct (wall 35 = 46 - 11 bonus replacements), turn timer expired live and auto-played, calling phases opened/resolved, bot melds formed, no gold ever discarded (verified against raw doc, not pixels), tile conservation checked by hand at seq 22
+- Next: M2 gate on a real iPhone (Quick Play vs 3 bots, screen locked through a calling phase and a bot turn), then vercel prod deploy + prod smoke. Gate 7 usage glance while a game is live
