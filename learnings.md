@@ -8,6 +8,7 @@ Corrections, patterns, decisions, and domain insights from building mahjong-v2. 
 **Wrong assumption:** `npx convex dev` walks you into cloud signup on first run
 **Reality:** Without a login it silently starts a local backend on port 3210 (`anonymous:anonymous-mahjong-v2`), no account, unreachable from other devices. Cloud requires `npx convex login` first, then `npx convex dev --once --configure=new --project <name>`
 **Impact:** Any Convex project setup: login BEFORE first dev run, and check .env.local for a .convex.cloud URL (not 127.0.0.1) before trusting realtime/timer behavior
+**Scope:** global — bridged to home memory (learning_convex-dev-anonymous-local)
 
 ## [2026-07-21] Convex scheduler is effectively exact for turn-timer purposes
 
@@ -22,3 +23,4 @@ Corrections, patterns, decisions, and domain insights from building mahjong-v2. 
 **Wrong assumption:** `vercel deploy dist --prod` deploys the dist folder into the linked/current project
 **Reality:** It created a NEW project literally named "dist" with a junk URL. Correct flow: `vercel link --yes --project <name>` from repo root, set env vars, then `vercel deploy --prod --yes`
 **Impact:** Never pass a folder path to vercel deploy for a real project; link first
+**Scope:** global — bridged to home memory (learning_vercel-deploy-folder-names-project)
