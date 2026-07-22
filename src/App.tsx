@@ -1,11 +1,30 @@
-// Placeholder while the M2 server loop lands. The spike UI that lived here is
-// gone with the spike tables; the real Quick Play client replaces this file
-// (design-server-loop.md section 8).
+// M2-minimal Quick Play client. design-server-loop.md §8: Home (name +
+// difficulty + Quick Play) and Game (view-driven, intents only — nothing
+// authoritative runs here).
+
+import { useState } from 'react';
+import { Home } from './screens/Home';
+import { Game } from './screens/Game';
+
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
+const ROOM_KEY = 'mahjong-room';
 
 export default function App() {
-  return (
-    <main className="flex min-h-dvh items-center justify-center">
-      <p className="text-lg">mahjong-v2: M2 in progress</p>
-    </main>
-  );
+  const [roomCode, setRoomCode] = useState<string | null>(() => localStorage.getItem(ROOM_KEY));
+
+  const enterRoom = (code: string) => {
+    localStorage.setItem(ROOM_KEY, code);
+    setRoomCode(code);
+  };
+
+  const leaveRoom = () => {
+    localStorage.removeItem(ROOM_KEY);
+    setRoomCode(null);
+  };
+
+  if (roomCode) {
+    return <Game key={roomCode} roomCode={roomCode} onLeave={leaveRoom} />;
+  }
+  return <Home onEnterRoom={enterRoom} />;
 }

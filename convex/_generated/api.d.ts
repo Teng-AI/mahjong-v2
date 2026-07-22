@@ -8,8 +8,12 @@
  * @module
  */
 
-import type * as rooms from "../rooms.js";
-import type * as timers from "../timers.js";
+import type * as bots from "../bots.js";
+import type * as intents from "../intents.js";
+import type * as lib from "../lib.js";
+import type * as loop from "../loop.js";
+import type * as quickplay from "../quickplay.js";
+import type * as views from "../views.js";
 
 import type {
   ApiFromModules,
@@ -18,8 +22,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  rooms: typeof rooms;
-  timers: typeof timers;
+  bots: typeof bots;
+  intents: typeof intents;
+  lib: typeof lib;
+  loop: typeof loop;
+  quickplay: typeof quickplay;
+  views: typeof views;
 }>;
 
 /**

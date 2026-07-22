@@ -26,6 +26,10 @@ import { applyAndSchedule, runDeadline, startHand } from './loop';
 
 type IntentResult = { ok: true } | { ok: false; code: string };
 
+// Result plus convex-layer rejections whose codes aren't EngineError members
+// (e.g. 'already_drawn'). Structurally compatible with the engine's Result.
+type TransitionResult = Result | { ok: false; error: { code: string } };
+
 /** Self-healing backstop (§6.2): if the deadline is well past and its scheduled
  *  function never fired, run the deadline logic inline first. A lost schedule
  *  then costs at most one player action of delay, never a stall. Returns the
@@ -48,7 +52,7 @@ async function runIntent(
   ctx: MutationCtx,
   roomCode: string,
   token: string,
-  transition: (state: EngineState, seat: Seat) => Result,
+  transition: (state: EngineState, seat: Seat) => TransitionResult,
 ): Promise<IntentResult> {
   const { player, game } = await loadActiveGame(ctx, roomCode, token);
   const { game: g, state } = await withBackstop(ctx, game);
@@ -61,7 +65,16 @@ async function runIntent(
 export const intentDraw = mutation({
   args: { roomCode: v.string(), token: v.string() },
   handler: (ctx, { roomCode, token }) =>
-    runIntent(ctx, roomCode, token, (state, seat) => draw(state, seat)),
+    runIntent(ctx, roomCode, token, (state, seat) => {
+      // draw() validates turn and phase but not whether the seat already holds
+      // a full hand (engine pattern: legalActions is the gate, same as
+      // canSelfDrawWin). Without this gate a modified client could stack extra
+      // tiles by drawing repeatedly.
+      if (legalActions(state, seat).canDraw) return draw(state, seat);
+      const probe = draw(state, seat);
+      if (!probe.ok) return probe; // precise code (not_your_turn / wrong_phase)
+      return { ok: false, error: { code: 'already_drawn' } };
+    }),
 });
 
 export const intentDiscard = mutation({
