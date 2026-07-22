@@ -24,4 +24,10 @@ Monthly ritual: glance at Convex dashboard usage vs free-plan caps, note it here
 - **Gate 2 PASS (timer fires with all clients dead).** startTurn writes deadlineAt + runAfter(30s, advanceTurn). iPhone locked with Safari killed, Mac tab blanked. Verified server-side via `npx convex run`: status fired, skew 5ms
 - **Gate 3 PASS (scheduler skew).** 30 timers (10 each at 10s/60s/120s), all fired. p50 5-6ms, p95 6-25ms, max 25ms. Gate was p95 < ~2s; result is 80x inside it
 - **Gate 4 PASS (cancel and replace).** 20s timer canceled by act(), replaced with 8s timer at counter 2; deliberate stale fire with counter 1. Result: advances 1, staleNoops 1, canceled timer never fired. Turn-counter guard works
-- Gates 5-8: pending. Note for M2: `npx convex run` from CLI is a clean way to drive server functions in tests/scripts
+- Deployed to prod for gate 5: https://mahjong-v2.vercel.app (Vercel project mahjong-v2, VITE_CONVEX_URL env set; stray auto-named "dist" project created then deleted). Points at the dev Convex deployment for now
+- **Gate 5 PASS (iOS PWA resync, both variants).** Home-screen install on iPhone. Airplane mode 2 min while Mac joined + a server timer fired mid-blackout: both converged on foreground without refresh. Backgrounded variant: same result
+- **Gate 6 PASS (OCC smoke).** 4 near-simultaneous act() mutations at one game doc: turnCounter +4 exactly (no lost writes, no errors), 3 canceled timers stayed silent, final timer advanced once
+- Stack decision: hard gates 2/3/5 all passed with wide margin. **Convex confirmed; runner-up not needed**
+- Gate 7 (quota burn): deferred to post-M2 when real games exist to measure; spike ops were trivially small
+- Gate 8 (CI deploy): pending, needs CONVEX_DEPLOY_KEY from dashboard (Teng) + GitHub secret
+- Note for M2: `npx convex run` from CLI is a clean way to drive server functions in tests/scripts

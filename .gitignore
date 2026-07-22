@@ -12,3 +12,4 @@ dist/
 # local noise
 .DS_Store
 *.log
+.vercel
