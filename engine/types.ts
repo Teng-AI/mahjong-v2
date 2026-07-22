@@ -27,6 +27,18 @@ export interface ChowOption {
   sequence: [TileType, TileType, TileType];
 }
 
+// Tile parsing shapes (v1 parity: tiles.ts parseTile/parseTileType).
+export type Suit = 'dots' | 'bamboo' | 'characters';
+export type WindDirection = 'east' | 'south' | 'west' | 'north';
+export type TileCategory = 'suit' | 'wind' | 'dragon';
+
+export interface ParsedTile {
+  category: TileCategory;
+  suit?: Suit;
+  value: number | WindDirection | string;
+  instance: number;
+}
+
 // Field names playerSeat/tileType and nullability match v1 exactly so the
 // ported tests construct these literals unchanged.
 export interface LastAction {
@@ -140,4 +152,11 @@ export interface NetPositions {
   seat1: number;
   seat2: number;
   seat3: number;
+}
+
+// settle.ts parity surface (spec 4.3).
+export interface Settlement {
+  from: Seat;
+  to: Seat;
+  amount: number;
 }

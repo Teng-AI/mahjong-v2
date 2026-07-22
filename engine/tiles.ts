@@ -3,7 +3,7 @@
 // This file is PARTIAL: only the adapter-proof functions are implemented.
 // Remaining functions land per design-engine-api.md before mass test porting.
 
-import type { TileId, TileType } from './types';
+import type { ChowOption, Meld, ParsedTile, TileId, TileType } from './types';
 
 const SUITS = ['dots', 'bamboo', 'characters'] as const;
 const WINDS = ['east', 'south', 'west', 'north'] as const;
@@ -80,4 +80,106 @@ export function canPung(
     (t) => getTileType(t) === type && !isGoldTile(t, goldType),
   ).length;
   return matches >= 2;
+}
+
+// ---------------------------------------------------------------------------
+// Stubs below: signatures per design-engine-api.md + v1 lib/tiles.ts (spec
+// 4.1). Not yet implemented; land per M1 implementation plan.
+// ---------------------------------------------------------------------------
+
+/** Split a tile id into its structural parts (category/suit/value/instance). */
+export function parseTile(_tileId: TileId): ParsedTile {
+  throw new Error('not implemented');
+}
+
+/**
+ * Whether tiles can form a winning hand (5 sets + 1 pair total; gold tiles
+ * act as wildcards). exposedMeldCount reduces the sets required from the
+ * concealed tiles passed in.
+ */
+export function canFormWinningHand(
+  _tiles: TileId[],
+  _goldTileType: TileType,
+  _exposedMeldCount: number = 0,
+): boolean {
+  throw new Error('not implemented');
+}
+
+/** Whether the 2 Gold tiles in hand are serving as the pair (not a wildcard set). */
+export function hasGoldenPair(
+  _tiles: TileId[],
+  _goldTileType: TileType,
+  _exposedMeldCount: number = 0,
+): boolean {
+  throw new Error('not implemented');
+}
+
+/** All valid Chow sequences formable with `discardTile` plus 2 tiles from hand. */
+export function canChow(
+  _hand: TileId[],
+  _discardTile: TileId,
+  _goldTileType: TileType,
+): ChowOption[] {
+  throw new Error('not implemented');
+}
+
+/** Whether hand + discardTile forms a winning hand (Ron). */
+export function canWinOnDiscard(
+  _hand: TileId[],
+  _discardTile: TileId,
+  _goldTileType: TileType,
+  _exposedMeldCount: number = 0,
+): boolean {
+  throw new Error('not implemented');
+}
+
+/** Remove each tile id in `toRemove` from `tiles`; null if any id is missing. */
+export function removeTiles(
+  _tiles: TileId[],
+  _toRemove: TileId[],
+): TileId[] | null {
+  throw new Error('not implemented');
+}
+
+/** Sort a hand for display: Golds first, then suit/wind/dragon, then value. */
+export function sortTilesForDisplay(
+  _tiles: TileId[],
+  _goldTileType: TileType | null,
+): TileId[] {
+  throw new Error('not implemented');
+}
+
+/** Whether hand has >= 3 matching non-gold copies of discardTile's type (Kong on discard). */
+export function canKong(
+  _hand: TileId[],
+  _discardTile: TileId,
+  _goldTileType: TileType,
+): boolean {
+  throw new Error('not implemented');
+}
+
+/** Tile types with 4 copies in hand (excluding Gold/bonus), eligible for concealed Kong. */
+export function canDeclareConcealedKong(
+  _hand: TileId[],
+  _goldTileType: TileType,
+): TileType[] {
+  throw new Error('not implemented');
+}
+
+/** Exposed Pungs upgradeable to Kong using a matching tile from hand. */
+export function canUpgradePungToKong(
+  _hand: TileId[],
+  _exposedMelds: Meld[],
+  _goldTileType: TileType,
+): { meldIndex: number; tileFromHand: TileId }[] {
+  throw new Error('not implemented');
+}
+
+/** Choose a discard that preserves the most sets (turn-timer auto-play / bots). */
+export function selectSafeDiscard(
+  _hand: TileId[],
+  _goldTileType: TileType,
+  _discardPile?: TileId[],
+): TileId | null {
+  throw new Error('not implemented');
 }
