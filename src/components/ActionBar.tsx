@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { getTileType } from '../../engine';
 import type { Seat, SeatView, TileId } from '../../engine';
 
@@ -14,9 +15,10 @@ interface ActionBarProps {
 }
 
 const BTN =
-  'rounded-full px-4 py-2 text-sm font-medium shadow-sm active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100';
+  'min-h-12 flex-1 rounded-xl px-1 text-xs font-semibold shadow-sm active:scale-95 transition-transform disabled:opacity-40 disabled:active:scale-100';
 
-/** Renders context buttons for the viewer only. Button VISIBILITY is derived
+/** Sticky bottom bar, contextual buttons only (v1 pattern, color-coded).
+ *  Renders context buttons for the viewer only. Button VISIBILITY is derived
  *  cheaply here for UX; LEGALITY is never decided client-side — every tap
  *  sends an intent and the server accepts or rejects it (design-server-loop
  *  §8: the client computes nothing authoritative). */
@@ -34,14 +36,16 @@ export function ActionBar({
   const isMyTurn = view.phase === 'playing' && view.currentPlayerSeat === seat;
   const isCalling = view.phase === 'calling' && view.pendingCalls?.[seat] === 'waiting';
 
+  let content: ReactNode;
+
   if (isMyTurn && view.ownHand) {
     const meldCount = view.melds[seat]?.length ?? 0;
     const readyToDiscard = view.ownHand.length === 17 - 3 * meldCount;
     const needsToDraw = view.ownHand.length === 16 - 3 * meldCount;
     const selected = selectedTiles[0];
 
-    return (
-      <div className="flex flex-wrap items-center gap-2">
+    content = (
+      <div className="flex gap-2">
         {needsToDraw && (
           <button type="button" className={`${BTN} bg-emerald-600 text-white`} onClick={onDraw}>
             Draw
@@ -80,14 +84,10 @@ export function ActionBar({
         )}
       </div>
     );
-  }
-
-  if (isCalling) {
-    const call = view.pendingCalls?.[seat];
-    void call;
+  } else if (isCalling) {
     const canChow = selectedTiles.length === 2;
-    return (
-      <div className="flex flex-wrap items-center gap-2">
+    content = (
+      <div className="flex gap-1.5">
         <button type="button" className={`${BTN} bg-amber-500 text-white`} onClick={() => onRespond('win')}>
           Win
         </button>
@@ -110,7 +110,13 @@ export function ActionBar({
         </button>
       </div>
     );
+  } else {
+    content = <p className="py-3 text-center text-xs text-emerald-50/60">Waiting…</p>;
   }
 
-  return <p className="text-xs opacity-60">Waiting…</p>;
+  return (
+    <div className="sticky bottom-0 shrink-0 border-t border-white/10 bg-emerald-950/95 px-2 pt-2 backdrop-blur [padding-bottom:calc(env(safe-area-inset-bottom)+0.5rem)]">
+      {content}
+    </div>
+  );
 }

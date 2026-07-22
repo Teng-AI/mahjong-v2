@@ -1,53 +1,41 @@
-import { TileBack } from './Tile';
-import { Melds, BonusTiles } from './Melds';
+import { Melds } from './Melds';
 import type { MeldView, Seat, TileType } from '../../engine';
 
 interface OpponentStripProps {
   seat: Seat;
   name: string;
-  isBot: boolean;
   isDealer: boolean;
   isCurrent: boolean;
   handCount: number;
+  bonusCount: number;
   melds: MeldView[];
-  bonusTiles: string[];
   goldTileType: TileType;
 }
 
-/** One opponent's row: name/tag, face-down tile-back count, melds, bonus tiles. */
-export function OpponentStrip({
-  name,
-  isBot,
-  isDealer,
-  isCurrent,
-  handCount,
-  melds,
-  bonusTiles,
-  goldTileType,
-}: OpponentStripProps) {
+/** One opponent's compact chip: name, dealer/turn state, tile count (a plain
+ *  number — no tile-backs, they don't fit at 375px), bonus count, and its
+ *  melds inline as small tiles when called. Stays under ~72px tall. */
+export function OpponentStrip({ name, isDealer, isCurrent, handCount, bonusCount, melds, goldTileType }: OpponentStripProps) {
   return (
     <div
       className={[
-        'flex items-center gap-2 rounded-lg border px-2 py-1.5',
-        isCurrent ? 'border-amber-400 bg-amber-50' : 'border-transparent bg-black/5',
+        'flex min-w-0 flex-1 flex-col gap-0.5 rounded-lg border px-1.5 py-1 text-emerald-50',
+        isCurrent ? 'border-amber-400 bg-amber-500/10' : 'border-white/10 bg-black/15',
       ].join(' ')}
     >
-      <div className="flex min-w-0 flex-col">
-        <div className="flex items-center gap-1 text-xs font-medium">
-          <span className="truncate max-w-20">{name}</span>
-          {isDealer && <span className="rounded bg-red-600 px-1 text-[10px] text-white">庄</span>}
-          {isBot && <span className="rounded bg-slate-400 px-1 text-[10px] text-white">BOT</span>}
-        </div>
-        <div className="flex items-center gap-1 mt-0.5">
-          {Array.from({ length: handCount }).map((_, i) => (
-            <TileBack key={i} size="sm" />
-          ))}
-        </div>
+      <div className="flex items-center gap-1 text-[11px] font-medium">
+        <span className="truncate">{name}</span>
+        {isDealer && <span className="shrink-0 rounded bg-red-600 px-1 text-[9px] text-white">庄</span>}
       </div>
-      <div className="flex flex-1 flex-col gap-1 min-w-0">
-        <Melds melds={melds} goldTileType={goldTileType} size="sm" />
-        <BonusTiles tiles={bonusTiles} size="sm" />
+      <div className="flex items-center gap-1.5 text-[10px] opacity-70">
+        <span>{handCount} tiles</span>
+        {bonusCount > 0 && <span>+{bonusCount} bonus</span>}
       </div>
+      {melds.length > 0 && (
+        <div className="overflow-x-auto">
+          <Melds melds={melds} goldTileType={goldTileType} size="sm" />
+        </div>
+      )}
     </div>
   );
 }

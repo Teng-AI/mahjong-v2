@@ -11,7 +11,6 @@ import { CenterBoard } from '../components/CenterBoard';
 import { CountdownBar } from '../components/CountdownBar';
 import { ActionBar } from '../components/ActionBar';
 import { WinnerOverlay } from '../components/WinnerOverlay';
-import { Scoreboard } from '../components/Scoreboard';
 import { Toasts } from '../components/Toasts';
 import { isGoldTile } from '../../engine';
 import type { Seat, TileId } from '../../engine';
@@ -59,7 +58,7 @@ export function Game({ roomCode, onLeave }: { roomCode: string; onLeave: () => v
 
   if (gameView === undefined) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-emerald-900 text-emerald-50">
+      <main className="flex h-dvh items-center justify-center bg-emerald-950 text-emerald-50">
         <p>Loading…</p>
       </main>
     );
@@ -89,56 +88,56 @@ export function Game({ roomCode, onLeave }: { roomCode: string; onLeave: () => v
 
   const otherSeats = ([1, 2, 3] as const).map((offset) => ((viewerSeat + offset) % 4) as Seat);
   const nameFor = (s: Seat) => players.find((p) => p.seat === s)?.name ?? `Seat ${s}`;
-  const isBot = (s: Seat) => players.find((p) => p.seat === s)?.isBot ?? false;
 
-  const turnTotalSeconds = (view.phase === 'calling' ? room.callingTimerSeconds : room.turnTimerSeconds) ?? 30;
+  const turnLabel =
+    view.phase === 'calling'
+      ? 'Calling…'
+      : view.phase === 'playing'
+        ? view.currentPlayerSeat === viewerSeat
+          ? 'Your turn'
+          : nameFor(view.currentPlayerSeat)
+        : 'Round over';
+
+  const ownHand = view.ownHand ?? [];
+  const ownMelds = view.melds[viewerSeat] ?? [];
+  const ownBonus = view.bonusTiles[viewerSeat] ?? [];
 
   return (
-    <main className="flex min-h-dvh flex-col gap-2 bg-emerald-950 p-2 text-emerald-50">
+    <main className="mx-auto flex h-dvh max-w-md flex-col bg-emerald-950 text-emerald-50">
       <Toasts toasts={toasts} />
 
-      <Scoreboard rounds={rounds} players={players} />
+      {/* Header: one line, glanceable without scrolling. */}
+      <header className="flex shrink-0 items-center gap-2 overflow-x-auto bg-black/30 px-2 py-1.5 text-xs">
+        <span className="shrink-0 font-mono opacity-70">{room.code}</span>
+        <Tile tile={view.exposedGold} size="sm" isGold />
+        <span className="shrink-0 opacity-70">Wall {view.wallCount}</span>
+        <span className="ml-auto shrink-0 truncate rounded-full bg-amber-500/90 px-2 py-0.5 font-medium text-emerald-950">
+          {turnLabel}
+        </span>
+        <CountdownBar deadlineAt={deadlineAt} />
+      </header>
 
-      <section className="flex flex-col gap-1">
-        {otherSeats.map((s) => (
-          <OpponentStrip
-            key={s}
-            seat={s}
-            name={nameFor(s)}
-            isBot={isBot(s)}
-            isDealer={view.dealerSeat === s}
-            isCurrent={view.phase === 'playing' ? view.currentPlayerSeat === s : view.pendingCalls?.[s] === 'waiting'}
-            handCount={view.handCounts[s]}
-            melds={view.melds[s] ?? []}
-            bonusTiles={view.bonusTiles[s] ?? []}
-            goldTileType={view.goldTileType}
-          />
-        ))}
-      </section>
-
-      <CenterBoard
-        discardPile={view.discardPile}
-        goldTileType={view.goldTileType}
-        exposedGold={view.exposedGold}
-        wallCount={view.wallCount}
-        roundNumber={room.roundNumber}
-      />
-
-      <CountdownBar deadlineAt={deadlineAt} totalSeconds={turnTotalSeconds} />
-
-      <section className="flex flex-col gap-1.5 rounded-lg bg-black/20 p-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs opacity-70">{nameFor(viewerSeat)} (you)</span>
+      {/* Own hand card, directly under the header (v1 pattern: hand on top). */}
+      <section className="flex shrink-0 flex-col gap-1.5 p-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-medium opacity-90">You</span>
           {view.dealerSeat === viewerSeat && (
             <span className="rounded bg-red-600 px-1 text-[10px] text-white">庄 Dealer</span>
           )}
+          {ownBonus.length > 0 && <BonusTiles tiles={ownBonus} goldTileType={view.goldTileType} size="sm" />}
+          <span className="ml-auto opacity-60">{ownHand.length} tiles</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Melds melds={view.melds[viewerSeat] ?? []} goldTileType={view.goldTileType} size="md" />
-          <BonusTiles tiles={view.bonusTiles[viewerSeat] ?? []} size="md" />
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {(view.ownHand ?? []).map((t, i) => (
+
+        {ownMelds.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="shrink-0 text-[10px] uppercase tracking-wide opacity-60">Melds:</span>
+            <Melds melds={ownMelds} goldTileType={view.goldTileType} size="sm" />
+          </div>
+        )}
+
+        {/* grid-cols-6 (not flex-wrap) so 17 tiles always wraps 6/6/5, regardless of viewport width. */}
+        <div className="grid grid-cols-6 gap-1">
+          {ownHand.map((t, i) => (
             <Tile
               key={`${t}-${i}`}
               tile={t}
@@ -150,6 +149,28 @@ export function Game({ roomCode, onLeave }: { roomCode: string; onLeave: () => v
           ))}
         </div>
       </section>
+
+      {/* Opponent chips: one row of 3. */}
+      <section className="flex shrink-0 gap-1.5 px-2">
+        {otherSeats.map((s) => (
+          <OpponentStrip
+            key={s}
+            seat={s}
+            name={nameFor(s)}
+            isDealer={view.dealerSeat === s}
+            isCurrent={view.phase === 'playing' ? view.currentPlayerSeat === s : view.pendingCalls?.[s] === 'waiting'}
+            handCount={view.handCounts[s]}
+            bonusCount={(view.bonusTiles[s] ?? []).length}
+            melds={view.melds[s] ?? []}
+            goldTileType={view.goldTileType}
+          />
+        ))}
+      </section>
+
+      {/* Center strip: discard pile. flex-1 min-h-0 (in CenterBoard) absorbs
+          whatever space is left in the h-dvh column and scrolls internally —
+          this is what keeps the whole screen to one viewport. */}
+      <CenterBoard discardPile={view.discardPile} />
 
       <ActionBar
         view={view}
@@ -173,7 +194,12 @@ export function Game({ roomCode, onLeave }: { roomCode: string; onLeave: () => v
         }
       />
 
-      <WinnerOverlay view={view} players={players} onNextRound={() => nextRound({ roomCode, token }).then(handleResult)} />
+      <WinnerOverlay
+        view={view}
+        players={players}
+        rounds={rounds}
+        onNextRound={() => nextRound({ roomCode, token }).then(handleResult)}
+      />
     </main>
   );
 }
