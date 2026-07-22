@@ -29,5 +29,9 @@ Monthly ritual: glance at Convex dashboard usage vs free-plan caps, note it here
 - **Gate 6 PASS (OCC smoke).** 4 near-simultaneous act() mutations at one game doc: turnCounter +4 exactly (no lost writes, no errors), 3 canceled timers stayed silent, final timer advanced once
 - Stack decision: hard gates 2/3/5 all passed with wide margin. **Convex confirmed; runner-up not needed**
 - Gate 7 (quota burn): deferred to post-M2 when real games exist to measure; spike ops were trivially small
-- Gate 8 (CI deploy): pending, needs CONVEX_DEPLOY_KEY from dashboard (Teng) + GitHub secret
-- Note for M2: `npx convex run` from CLI is a clean way to drive server functions in tests/scripts
+- **Gate 8 PASS (CI deploy path).** Prod Convex deployment created (jovial-sparrow-812, US East) with a deploy-scoped key in GitHub secret CONVEX_DEPLOY_KEY; Action deploys functions on push to main (first run green). Vercel prod env flipped from dev to prod Convex URL. Verified from iPhone on cellular: page loads, Join writes to prod DB
+- **M0 COMPLETE: 7/8 gates pass, gate 7 deferred with reason. Convex committed.**
+- Hours: ~2 (including Convex account setup detours)
+- Broke: nothing lasting. Detours: anonymous local Convex default; Vercel auto-named a project "dist" when deploying the dist/ folder (deleted, re-linked properly as mahjong-v2); a second convex.cloud URL in the prod bundle turned out to be example text inside the Convex client's error message, not a misconfiguration
+- Note for M2: `npx convex run` from CLI is a clean way to drive server functions in tests/scripts; `--prod` flag targets production
+- Next: M1 engine. Port 5 of the 131 v1 tests first as adapter proof, then the rest. Pure TS, zero Convex imports. Per CLAUDE.md model routing: Fable designs the engine API, Opus/Sonnet grind the implementation against tests
