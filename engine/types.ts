@@ -160,3 +160,80 @@ export interface Settlement {
   to: Seat;
   amount: number;
 }
+
+// deal.ts input (design-engine-api.md).
+export interface HandConfig {
+  dealerSeat: Seat;
+  dealerStreak: number; // streak banked BEFORE this hand (parity ruling 1)
+}
+
+// score.ts input (design-engine-api.md, spec 1.7).
+export interface ScoreInput {
+  hand: TileId[];
+  melds: Meld[];
+  bonusTiles: TileId[];
+  goldTileType: TileType;
+  isDealer: boolean;
+  dealerStreak: number;
+  winPath: 'self_draw' | 'discard' | 'three_golds' | 'robbing_gold';
+}
+
+// game.ts legalActions() output (design-engine-api.md).
+export interface LegalActions {
+  canDraw: boolean;
+  canDiscard: boolean;
+  canSelfDrawWin: boolean;
+  concealedKongTypes: TileType[];
+  pungUpgrades: { meldIndex: number; tile: TileId }[];
+  call: null | {
+    canWin: boolean;
+    canKong: boolean;
+    canPung: boolean;
+    chowOptions: ChowOption[];
+  };
+}
+
+// --- Redaction (view.ts) ------------------------------------------------------
+// Concrete SeatView shape (design doc describes it structurally; this is the
+// implementation choice, documented in the M1 test-authoring report):
+// - wall contents replaced by wallCount.
+// - other seats' hands replaced by counts (handCounts); only the viewer's own
+//   concealed tiles appear under ownHand (null for spectatorView).
+// - concealed-kong meld tiles are hidden (tiles: [], hidden: true) from every
+//   viewer except the meld's own seat, for all phases including 'ended' -- v1
+//   parity: the action log never reveals a concealed Gang's tile type, even
+//   at hand end. Exposed melds (chow/pung/open kong) are always shown in full
+//   since they are public information the moment they're called.
+// - winner.hand is left untouched by redaction: once phase is 'ended' and a
+//   winner exists, the full winning hand is intentionally revealed to
+//   everyone (spec: winner reveal), matching v1's winner-reveal screen.
+
+export interface MeldView {
+  type: MeldType;
+  tiles: TileId[]; // [] when hidden
+  calledTile?: TileId;
+  isConcealed?: boolean;
+  hidden?: boolean; // true only for another seat's concealed kong
+}
+
+export interface SeatView {
+  seq: number;
+  phase: Phase;
+  dealerSeat: Seat;
+  currentPlayerSeat: Seat;
+  goldTileType: TileType;
+  exposedGold: TileId;
+  wallCount: number;
+  viewerSeat: Seat | null; // null only for spectatorView
+  ownHand: TileId[] | null; // null for spectatorView
+  handCounts: Record<Seat, number>;
+  melds: Record<Seat, MeldView[]>;
+  bonusTiles: Record<Seat, TileId[]>;
+  discardPile: TileId[];
+  lastAction: LastAction | null;
+  previousAction: LastAction | null;
+  pendingCalls: Record<Seat, CallStatus> | null;
+  calledTypeThisTurn: TileType | null;
+  winner: WinnerInfo | null;
+  endReason: 'win' | 'wall_exhausted' | null;
+}

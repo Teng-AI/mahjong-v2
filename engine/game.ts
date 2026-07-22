@@ -6,7 +6,17 @@ import {
   canWinOnDiscard as canWinOnDiscardTile,
   isBonusTile,
 } from './tiles';
-import type { LastAction, Seat, TileId, TileType } from './types';
+import type {
+  CallAction,
+  ChowSelection,
+  EngineState,
+  LastAction,
+  LegalActions,
+  Result,
+  Seat,
+  TileId,
+  TileType,
+} from './types';
 
 /** Turn order is counter-clockwise: 0 -> 1 -> 2 -> 3 -> 0. */
 export function getNextSeat(seat: Seat): Seat {
@@ -72,4 +82,71 @@ export function canWinOnDiscard(
   exposedMeldCount: number = 0,
 ): boolean {
   return canWinOnDiscardTile(hand, discardedTile, goldTileType, exposedMeldCount);
+}
+
+// --- Transitions (design-engine-api.md "game.ts") -----------------------------
+// STUB: signatures only. Every transition is (state, ...) => Result and never
+// throws once implemented; for now the body throws so callers (and tests) see
+// an explicit "not implemented" failure rather than a silent wrong answer.
+
+export function draw(state: EngineState, seat: Seat): Result {
+  void state;
+  void seat;
+  throw new Error('not implemented');
+}
+
+export function discard(state: EngineState, seat: Seat, tile: TileId): Result {
+  void state;
+  void seat;
+  void tile;
+  throw new Error('not implemented');
+}
+
+export function respondToCall(
+  state: EngineState,
+  seat: Seat,
+  action: CallAction,
+  chow?: ChowSelection,
+): Result {
+  void state;
+  void seat;
+  void action;
+  void chow;
+  throw new Error('not implemented');
+}
+
+export function declareSelfDrawWin(state: EngineState, seat: Seat): Result {
+  void state;
+  void seat;
+  throw new Error('not implemented');
+}
+
+export function declareConcealedKong(
+  state: EngineState,
+  seat: Seat,
+  type: TileType,
+): Result {
+  void state;
+  void seat;
+  void type;
+  throw new Error('not implemented');
+}
+
+export function upgradePungToKong(
+  state: EngineState,
+  seat: Seat,
+  meldIndex: number,
+  tile: TileId,
+): Result {
+  void state;
+  void seat;
+  void meldIndex;
+  void tile;
+  throw new Error('not implemented');
+}
+
+export function legalActions(state: EngineState, seat: Seat): LegalActions {
+  void state;
+  void seat;
+  throw new Error('not implemented');
 }
