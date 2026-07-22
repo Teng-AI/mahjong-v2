@@ -61,6 +61,15 @@ export async function applyAndSchedule(
 ): Promise<void> {
   await cancelSched(ctx, gameDoc.schedId);
 
+  // Wall exhausted with a draw pending: the hand is already decided, so end it
+  // now instead of parking on a pointless draw intent (a human seat would
+  // otherwise stall until they tapped Draw or the turn timer fired; iPhone
+  // gate feedback 2026-07-22). draw() on an empty wall ends the hand.
+  if (state.phase === 'playing' && state.wall.length === 0 && needsToDraw(state)) {
+    const r = draw(state, state.currentPlayerSeat);
+    if (r.ok) state = r.state;
+  }
+
   if (state.phase === 'ended') {
     await settleHand(ctx, gameDoc, state);
     return;

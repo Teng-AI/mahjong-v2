@@ -123,6 +123,45 @@ describe('over-draw gate (intentDraw)', () => {
   });
 });
 
+describe('wall-exhaustion auto-end', () => {
+  it('ends the hand immediately when the wall empties with a draw pending, no intent needed', async () => {
+    const t = mkT();
+    const { roomId, roomCode } = await setupRoom(t, { turnTimerSeconds: 30, callingTimerSeconds: 30 });
+    const gameId = await dealJunkHand(t, roomId);
+
+    // Drain the wall so the human dealer's discard leaves seat 1 needing a
+    // draw from an empty wall (also below the wall<=4 calling-skip threshold,
+    // so the discard goes straight to the next turn).
+    await t.run(async (ctx: MutationCtx) => {
+      const game = (await ctx.db.get(gameId))!;
+      const s = game.engine as EngineState;
+      await ctx.db.patch(gameId, { engine: { ...s, wall: [] } });
+    });
+
+    const drained = await getEngine(t, gameId);
+    const tile = drained.hands[0][0];
+    const res = await t.mutation(api.intents.intentDiscard, {
+      roomCode,
+      token: 'human-token',
+      tile,
+    });
+    expect(res).toEqual({ ok: true });
+
+    // No bot draw, no timer, no further human intent: the hand is settled.
+    const after = await getGame(t, gameId);
+    const afterState = after.engine as EngineState;
+    expect(afterState.phase).toBe('ended');
+    expect(afterState.endReason).toBe('wall_exhausted');
+    expect(after.schedId).toBeNull();
+    expect(after.deadlineAt).toBeNull();
+    const rounds = await t.run(async (ctx: MutationCtx) =>
+      ctx.db.query('rounds').collect(),
+    );
+    expect(rounds).toHaveLength(1);
+    expect(rounds[0].winnerSeat).toBeNull();
+  });
+});
+
 describe('7. storage round-trip of optional-absent fields', () => {
   it('preserves a Meld with an absent calledTile and a WinnerInfo with an absent winningTile', async () => {
     const t = mkT();
